@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-const API = 'https://invoice-back-zcg0.onrender.com'
 type Client = {
     id: number
     name: string
