@@ -86,7 +86,7 @@ export default function Invoices() {
             const data = await res.json()
             alert(data.message)
         } else {
-            const res = await fetch('http://localhost:8000/addInvoices', {
+            const res = await fetch('https://invoice-back-zcg0.onrender.com/addInvoices', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(form)
@@ -98,7 +98,7 @@ export default function Invoices() {
     }
 
     const handleDelete = async (c: Inoivce) => {
-        const res = await fetch('http://localhost:8000/deleteInvoices', {
+        const res = await fetch('https://invoice-back-zcg0.onrender.com/deleteInvoices', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: c.id })
@@ -114,7 +114,7 @@ export default function Invoices() {
         })
 
     const changeStatus = async (id: number, e: string) => {
-        const res = await fetch('http://localhost:8000/changestatus', {
+        const res = await fetch('https://invoice-back-zcg0.onrender.com/changestatus', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, e })
@@ -124,11 +124,11 @@ export default function Invoices() {
     }
 
     useEffect(() => {
-        fetch('http://localhost:8000/getInvoices').then(res => res.json()).then(data => setInvoices(data))
+        fetch('https://invoice-back-zcg0.onrender.com/getInvoices').then(res => res.json()).then(data => setInvoices(data))
     }, [handleSave])
 
     useEffect(() => {
-        fetch('http://localhost:8000/getUsers').then(res => res.json()).then(data => setClients(data))
+        fetch('https://invoice-back-zcg0.onrender.com/getUsers').then(res => res.json()).then(data => setClients(data))
     }, [openAdd])
 
     return (
