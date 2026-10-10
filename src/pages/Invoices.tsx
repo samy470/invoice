@@ -78,7 +78,7 @@ export default function Invoices() {
         e.preventDefault()
 
         if (editingId !== null) {
-            const res = await fetch('http://localhost:8000/updateInvoices', {
+            const res = await fetch('https://invoice-back-zcg0.onrender.com/updateInvoices', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...form, id: editingId })
