@@ -9,7 +9,7 @@ export default function Home() {
     const [stats, setStats] = useState<Stats>({ invoiced: 0, paid: 0, unpaid: 0, clients: 0 })
 
     useEffect(() => {
-        fetch('http://localhost:8000/getDash')
+        fetch('https://invoice-back-zcg0.onrender.com/getDash')
             .then(res => res.json())
             .then(data => setStats(data))
     }, [])
