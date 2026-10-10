@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-
+const API = 'https://invoice-back-zcg0.onrender.com'
 type Client = {
     id: number
     name: string
@@ -59,7 +59,7 @@ export default function Clients() {
         if (!form.name.trim()) return
 
         if (editingId !== null) {
-            const res = await fetch('http://localhost:8000/updateUsers', {
+            const res = await fetch('https://invoice-back-zcg0.onrender.com/updateUsers', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify( {...form, id: editingId} )
