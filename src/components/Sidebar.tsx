@@ -1,11 +1,23 @@
 import { useState } from "react";
-import { Link, Outlet } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MdDashboard } from "react-icons/md";
 import { FaUsers } from "react-icons/fa";
 import { FaFileInvoiceDollar } from "react-icons/fa";
+import { CiLogin } from "react-icons/ci";
+import { FaUserPlus } from "react-icons/fa";
+import { CgProfile } from "react-icons/cg";
+import { IoLogOutOutline } from "react-icons/io5";
 
-export default function Sidebar() {
+export default function Sidebar({ children, isLoggedIn, setIsLoggedIn, username, setUsername }: { children: React.ReactNode, isLoggedIn: boolean, setIsLoggedIn: (value: boolean) => void, username: string, setUsername: (value: string) => void }) {
     const [title, setTitle] = useState('')
+    const navigate = useNavigate()
+
+    function handleLogout() {
+        setIsLoggedIn(false)
+        setUsername('')
+        localStorage.removeItem('token')
+        navigate('/')
+    }
 
     return (
         <div className="drawer lg:drawer-open">
@@ -19,7 +31,7 @@ export default function Sidebar() {
                     </label>
                     <div className="px-4">{title}</div>
                 </nav>
-                <Outlet/>
+                {children}
             </div>
 
             <div className="drawer-side is-drawer-close:overflow-visible">
@@ -29,7 +41,7 @@ export default function Sidebar() {
                     <ul className="menu w-full grow">
                         {/* List item */}
                         <li>
-                            <Link className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Dashboard" to={'/'} onClick={() => {setTitle("Dashboard")}}>
+                            <Link className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Dashboard" to={'/'} onClick={() => { setTitle("Dashboard") }}>
                                 <MdDashboard />
                                 <span className="is-drawer-close:hidden">Dashboard</span>
                             </Link>
@@ -37,19 +49,53 @@ export default function Sidebar() {
 
                         {/* List item */}
                         <li>
-                            <Link className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Clients" to={'clients'} onClick={() => {setTitle("Clients")}}>
+                            <Link className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Clients" to={'/clients'} onClick={() => { setTitle("Clients") }}>
                                 <FaUsers />
                                 <span className="is-drawer-close:hidden">Clients</span>
                             </Link>
                         </li>
 
                         <li>
-                            <Link className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Invoices" to={'invoices'} onClick={() => {setTitle("Incoices")}}>
+                            <Link className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Invoices" to={'/invoices'} onClick={() => { setTitle("Invoices") }}>
                                 <FaFileInvoiceDollar />
                                 <span className="is-drawer-close:hidden">Invoices</span>
                             </Link>
                         </li>
                     </ul>
+                    {isLoggedIn ? (
+                        <ul className="menu w-full">
+                            <li>
+                                <Link className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Invoices" to={'/profile'} onClick={() => { setTitle("Profile") }}>
+                                    <CgProfile />
+                                    <span className="is-drawer-close:hidden">{username}</span>
+                                </Link>
+                            </li>
+                            <li>
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg"
+                                >
+                                    <IoLogOutOutline />
+                                    <span className="is-drawer-close:hidden">Logout</span>
+                                </button>
+                            </li>
+                            </ul>
+                            ) : (
+                            <ul className="menu w-full">
+                                <li>
+                                    <Link className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Login" to={'/login'} onClick={() => { setTitle("Login") }}>
+                                        <CiLogin />
+                                        <span className="is-drawer-close:hidden">Login</span>
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Register" to={'/register'} onClick={() => { setTitle("Register") }}>
+                                        <FaUserPlus />
+                                        <span className="is-drawer-close:hidden">Register</span>
+                                    </Link>
+                                </li>
+                        </ul>
+                    )}
                 </div>
             </div>
         </div>

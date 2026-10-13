@@ -15,6 +15,8 @@ type Inoivce = {
     items: Item[]
 }
 
+type Profile = { businessName?: string; address?: string; phone?: string; nif?: string; nis?: string }
+
 const today = () => new Date().toISOString().slice(0, 10)
 const inDays = (n: number) => {
     const d = new Date()
@@ -40,6 +42,7 @@ export default function Invoices() {
     const [formOpen, setFormOpen] = useState(false)
     const [editingId, setEditingId] = useState<number | null>(null)
     const [form, setForm] = useState(emptyForm)
+    const [profile, setProfile] = useState<Profile>({})
 
     const subtotal = form.items.reduce((s: number, i: any) => s + i.qty * i.price, 0)
     const tax = (subtotal * form.taxRate) / 100
@@ -131,6 +134,12 @@ export default function Invoices() {
         fetch('http://localhost:8000/getUsers').then(res => res.json()).then(data => setClients(data))
     }, [openAdd])
 
+    useEffect(() => {
+        fetch('http://localhost:8000/getProfile')
+            .then(res => res.json())
+            .then(data => setProfile(data))
+    }, [])
+
     return (
         <div className="p-6">
             {/* top bar */}
@@ -202,73 +211,74 @@ export default function Invoices() {
             </div>
 
             {/* details modal */}
-{selected && (
-    <div className="modal modal-open">
-        <div className="modal-box max-w-2xl">
-            <div id="print-area">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h3 className="text-2xl font-bold">{selected.invoiceNumber}</h3>
-                        <p className="opacity-60">{selected.clientName}</p>
-                    </div>
-                    <span className="badge badge-ghost">{selected.status}</span>
-                </div>
-
-                <p className="text-sm opacity-60 mt-2">
-                    Issued {selected.date} · Due {selected.dueDate}
-                </p>
-
-                <table className="table mt-4">
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>Qty</th>
-                            <th>Unit price</th>
-                            <th className="text-right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {selected.items.map((item, index) => (
-                            <tr key={index}>
-                                <td>{item.description}</td>
-                                <td>{item.qty}</td>
-                                <td>{fmt(item.price)}</td>
-                                <td className="text-right">{fmt(item.qty * item.price)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                {(() => {
-                    const sub = selected.items.reduce((s, i) => s + i.qty * i.price, 0)
-                    const tax = (sub * selected.taxRate) / 100
-                    return (
-                        <div className="mt-4 ml-auto w-64 flex flex-col gap-1">
-                            <div className="flex justify-between">
-                                <span className="opacity-60">Subtotal</span>
-                                <span>{fmt(sub)}</span>
+            {selected && (
+                <div className="modal modal-open">
+                    <div className="modal-box max-w-2xl">
+                        <div id="print-area">
+                            <div className="mb-4 pb-3 border-b">
+                                <div className="text-lg font-bold">{profile.businessName}</div>
+                                <div className="text-sm">{profile.address}</div>
+                                <div className="text-sm">{profile.phone}</div>
+                                <div className="text-sm opacity-70">
+                                    {profile.nif && `NIF: ${profile.nif}`} {profile.nis && `NIS: ${profile.nis}`}
+                                </div>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="opacity-60">Tax ({selected.taxRate}%)</span>
-                                <span>{fmt(tax)}</span>
-                            </div>
-                            <div className="flex justify-between text-lg font-bold border-t pt-1">
-                                <span>Total</span>
-                                <span>{fmt(sub + tax)}</span>
-                            </div>
+
+                            <p className="text-sm opacity-60 mt-2">
+                                Issued {selected.date} · Due {selected.dueDate}
+                            </p>
+
+                            <table className="table mt-4">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th>Qty</th>
+                                        <th>Unit price</th>
+                                        <th className="text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {selected.items.map((item, index) => (
+                                        <tr key={index}>
+                                            <td>{item.description}</td>
+                                            <td>{item.qty}</td>
+                                            <td>{fmt(item.price)}</td>
+                                            <td className="text-right">{fmt(item.qty * item.price)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            {(() => {
+                                const sub = selected.items.reduce((s, i) => s + i.qty * i.price, 0)
+                                const tax = (sub * selected.taxRate) / 100
+                                return (
+                                    <div className="mt-4 ml-auto w-64 flex flex-col gap-1">
+                                        <div className="flex justify-between">
+                                            <span className="opacity-60">Subtotal</span>
+                                            <span>{fmt(sub)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="opacity-60">Tax ({selected.taxRate}%)</span>
+                                            <span>{fmt(tax)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-lg font-bold border-t pt-1">
+                                            <span>Total</span>
+                                            <span>{fmt(sub + tax)}</span>
+                                        </div>
+                                    </div>
+                                )
+                            })()}
                         </div>
-                    )
-                })()}
-            </div>
 
-            <div className="modal-action no-print">
-                <button className="btn" onClick={() => window.print()}>Download PDF</button>
-                <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
-            </div>
-        </div>
-        <div className="modal-backdrop no-print" onClick={() => setSelected(null)} />
-    </div>
-)}
+                        <div className="modal-action no-print">
+                            <button className="btn" onClick={() => window.print()}>Download PDF</button>
+                            <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
+                        </div>
+                    </div>
+                    <div className="modal-backdrop no-print" onClick={() => setSelected(null)} />
+                </div>
+            )}
             {/* add / edit modal */}
             {formOpen && (
                 <div className="modal modal-open">

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @plugin "daisyui";
+@import "shadcn/tailwind.css";
+
 @media print {
     body * { visibility: hidden; }
     #print-area, #print-area * { visibility: visible; }

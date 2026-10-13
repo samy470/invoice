@@ -6,6 +6,7 @@ type Client = {
     phone?: string
     email: string
     taxId?: string
+    statId?: string
     owed: number
 }
 
@@ -14,9 +15,10 @@ type ClientForm = {
     email: string
     phone: string
     taxId: string
+    statId: string
 }
 
-const emptyForm: ClientForm = { name: "", email: "", phone: "", taxId: "" }
+const emptyForm: ClientForm = { name: "", email: "", phone: "", taxId: "", statId: "" }
 
 export default function Clients() {
     const [users, setUsers] = useState<Client[]>([])
@@ -44,6 +46,7 @@ export default function Clients() {
             email: c.email,
             phone: c.phone ?? "",
             taxId: c.taxId ?? "",
+            statId: c.statId ?? ""
         })
         setFormOpen(true)
     }
@@ -122,6 +125,8 @@ export default function Clients() {
                             </th>
                             <th>Name</th>
                             <th>Phone Number</th>
+                            <th>Tax Id</th>
+                            <th>Stat Id</th>
                             <th>Owed</th>
                             <th>Actions</th>
                         </tr>
@@ -151,9 +156,15 @@ export default function Clients() {
                                 </td>
                                 <td>
                                     {u.phone ?? "-"}
-                                    <br />
-                                    <span className="badge badge-ghost badge-sm">{u.taxId ?? "No tax ID"}</span>
                                 </td>
+                                <td>
+                                    {u.taxId ?? "-"}
+                                </td>
+
+                                <td>
+                                    {u.statId ?? "-"}
+                                </td>
+                                
                                 <td>
                                     <span className={`badge ${u.owed > 0 ? "badge-warning" : "badge-ghost"}`}>
                                         {u.owed}
@@ -239,6 +250,12 @@ export default function Clients() {
                             placeholder="Tax ID (optional)"
                             value={form.taxId}
                             onChange={e => setForm({ ...form, taxId: e.target.value })}
+                        />
+                         <input
+                            className="input input-bordered w-full"
+                            placeholder="Stat ID (optional)"
+                            value={form.statId}
+                            onChange={e => setForm({ ...form, statId: e.target.value })}
                         />
 
                         <div className="modal-action">
