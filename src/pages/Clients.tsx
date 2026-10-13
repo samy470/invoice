@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-
 type Client = {
     id: number
     name: string
@@ -62,7 +61,7 @@ export default function Clients() {
         if (!form.name.trim()) return
 
         if (editingId !== null) {
-            const res = await fetch('http://localhost:8000/updateUsers', {
+            const res = await fetch('https://invoice-back-zcg0.onrender.com/updateUsers', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify( {...form, id: editingId} )
@@ -70,7 +69,7 @@ export default function Clients() {
         const data = await res.json()
         alert(data.message)
         }else {
-            const res = await fetch('http://localhost:8000/addUsers', {
+            const res = await fetch('https://invoice-back-zcg0.onrender.com/addUsers', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify( form )
@@ -84,7 +83,7 @@ export default function Clients() {
     const handleDelete = async (c: Client) => {
         if (!window.confirm(`Delete ${c.name}?`)) return
         
-        const res = await fetch('http://localhost:8000/deleteUsers', {
+        const res = await fetch('https://invoice-back-zcg0.onrender.com/deleteUsers', {
             method: 'DELETE',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ id: c.id })
@@ -94,7 +93,7 @@ export default function Clients() {
     }
 
     useEffect(() => {
-        fetch('http://localhost:8000/getUsers').then(res => res.json()).then(data => setUsers(data))
+        fetch('https://invoice-back-zcg0.onrender.com/getUsers').then(res => res.json()).then(data => setUsers(data))
     }, [handleSave])
 
     return (
