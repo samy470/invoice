@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 
-const API = 'http://localhost:8000'
+const API = 'https://invoice-back-zcg0.onrender.com'
 
 type Profile = {
     businessName: string
