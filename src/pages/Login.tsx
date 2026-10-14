@@ -8,7 +8,7 @@ export default function Login({ setIsLoggedIn, username, setUsername }: { setIsL
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const res = await fetch('http://https://invoice-back-zcg0.onrender.com/login', {
+    const res = await fetch('https://invoice-back-zcg0.onrender.com/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
