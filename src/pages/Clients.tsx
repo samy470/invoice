@@ -6,6 +6,7 @@ type Client = {
     email: string
     taxId?: string
     statId?: string
+    rc?: string
     owed: number
 }
 
@@ -15,11 +16,15 @@ type ClientForm = {
     phone: string
     taxId: string
     statId: string
+    rc: string
 }
 
-const emptyForm: ClientForm = { name: "", email: "", phone: "", taxId: "", statId: "" }
+const emptyForm: ClientForm = { name: "", email: "", phone: "", taxId: "", statId: "", rc: "" }
 
-export default function Clients() {
+export default function Clients({ s }: { s: { currency: string; taxRate: number } }) {
+    const fmt = (n: number) =>
+        new Intl.NumberFormat(undefined, { style: "currency", currency: s.currency }).format(n)
+
     const [users, setUsers] = useState<Client[]>([])
     const [selected, setSelected] = useState<Client | null>(null)
     const [search, setSearch] = useState("")
@@ -30,6 +35,17 @@ export default function Clients() {
     const filtered = users.filter(u =>
         (u.name + " " + u.email).toLowerCase().includes(search.toLowerCase())
     )
+
+    const fetchUsers = () =>
+    fetch(`${import.meta.env.VITE_API_URL}/getUsers`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    })
+        .then(res => res.json())
+        .then(data => setUsers(data))
+
+useEffect(() => {
+    fetchUsers()
+}, [])
 
     const openAdd = () => {
         setEditingId(null)
@@ -45,7 +61,8 @@ export default function Clients() {
             email: c.email,
             phone: c.phone ?? "",
             taxId: c.taxId ?? "",
-            statId: c.statId ?? ""
+            statId: c.statId ?? "",
+            rc: c.rc ?? ""          
         })
         setFormOpen(true)
     }
@@ -61,40 +78,38 @@ export default function Clients() {
         if (!form.name.trim()) return
 
         if (editingId !== null) {
-            const res = await fetch('https://invoice-back-zcg0.onrender.com/updateUsers', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/updateUsers`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
             body: JSON.stringify( {...form, id: editingId} )
         })
         const data = await res.json()
         alert(data.message)
         }else {
-            const res = await fetch('https://invoice-back-zcg0.onrender.com/addUsers', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/addUsers`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
             body: JSON.stringify( form )
         })
         const data = await res.json()
         alert(data.message)
         }
+        await fetchUsers()
         closeForm()
     }
 
     const handleDelete = async (c: Client) => {
         if (!window.confirm(`Delete ${c.name}?`)) return
         
-        const res = await fetch('https://invoice-back-zcg0.onrender.com/deleteUsers', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/deleteUsers`, {
             method: 'DELETE',
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}`},
             body: JSON.stringify({ id: c.id })
         })
         const data = await res.json()
         alert(data.message)
+        await fetchUsers()
     }
-
-    useEffect(() => {
-        fetch('https://invoice-back-zcg0.onrender.com/getUsers').then(res => res.json()).then(data => setUsers(data))
-    }, [handleSave])
 
     return (
         <div className="p-6">
@@ -117,15 +132,11 @@ export default function Clients() {
                     {/* head */}
                     <thead>
                         <tr>
-                            <th>
-                                <label>
-                                    <input type="checkbox" className="checkbox" />
-                                </label>
-                            </th>
                             <th>Name</th>
                             <th>Phone Number</th>
                             <th>Tax Id</th>
                             <th>Stat Id</th>
+                            <th>rc</th>
                             <th>Owed</th>
                             <th>Actions</th>
                         </tr>
@@ -140,11 +151,6 @@ export default function Clients() {
                         )}
                         {filtered.map(u => (
                             <tr key={u.id}>
-                                <th>
-                                    <label>
-                                        <input type="checkbox" className="checkbox" />
-                                    </label>
-                                </th>
                                 <td>
                                     <div className="flex items-center gap-3">
                                         <div>
@@ -159,14 +165,16 @@ export default function Clients() {
                                 <td>
                                     {u.taxId ?? "-"}
                                 </td>
-
                                 <td>
                                     {u.statId ?? "-"}
                                 </td>
-                                
+                                <td>
+                                    {u.rc ?? "-"}
+                                </td>
+
                                 <td>
                                     <span className={`badge ${u.owed > 0 ? "badge-warning" : "badge-ghost"}`}>
-                                        {u.owed}
+                                        {fmt(u.owed)}
                                     </span>
                                 </td>
                                 <th>
@@ -200,13 +208,10 @@ export default function Clients() {
                             <li>
                                 <span className="opacity-50">Owed:</span>{" "}
                                 <span className={`badge ${selected.owed > 0 ? "badge-warning" : "badge-ghost"}`}>
-                                    {selected.owed}
+                                    {fmt(selected.owed)}
                                 </span>
                             </li>
                         </ul>
-
-                        <h4 className="mt-6 font-bold">Invoices</h4>
-                        <p className="text-sm opacity-50">No invoices yet.</p>
 
                         <div className="modal-action">
                             <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
@@ -250,11 +255,11 @@ export default function Clients() {
                             value={form.taxId}
                             onChange={e => setForm({ ...form, taxId: e.target.value })}
                         />
-                         <input
+                        <input
                             className="input input-bordered w-full"
-                            placeholder="Stat ID (optional)"
-                            value={form.statId}
-                            onChange={e => setForm({ ...form, statId: e.target.value })}
+                            placeholder="rc(optional)"
+                            value={form.rc}
+                            onChange={e => setForm({ ...form, rc: e.target.value })}
                         />
 
                         <div className="modal-action">

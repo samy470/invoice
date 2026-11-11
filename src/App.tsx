@@ -10,21 +10,22 @@ import Register from './pages/Register'
 import Profile from './pages/Profil'
 
 function App() {
-  const [username, setUsername] = useState('')
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [username, setUsername] = useState(localStorage.getItem('username') ?? '')
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'))
+  const [s, setS] = useState({ currency: "DZD", taxRate: 19, ...JSON.parse(localStorage.getItem("settings") || "{}") })
 
   return (
-    <BrowserRouter>
-      <Sidebar isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} username={username} setUsername={setUsername}>
+    <BrowserRouter>     
         <Routes>
-          <Route index element={<Home />}></Route>
-          <Route path='/clients' element={<Clients />}></Route>
-          <Route path='/invoices' element={<Invoices />}></Route>
-          <Route path='/login' element={<Login setIsLoggedIn={setIsLoggedIn} username={username} setUsername={setUsername} />}></Route>
-          <Route path='/register' element={<Register />}></Route>
-          <Route path='/profile' element={<Profile/>}></Route>
+          <Route path='/login' element={<Login setIsLoggedIn={setIsLoggedIn} username={username} setUsername={setUsername} />}/>
+          <Route path='/register' element={<Register />}/>
+          <Route path='/' element={<Sidebar isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} username={username} setUsername={setUsername} s={s} setS={setS}/>}>
+            <Route index element={<Home s={s}/>}/>
+            <Route path='/clients' element={<Clients s={s}/>}/>
+            <Route path='/invoices' element={<Invoices s={s} />}/>
+            <Route path='/profile' element={<Profile/>}/>
+          </Route>
         </Routes>
-      </Sidebar>
     </BrowserRouter>
   )
 }

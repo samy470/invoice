@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react"
 type Stats = { invoiced: number; paid: number; unpaid: number; clients: number }
 
-const fmt = (n: number) =>
-    new Intl.NumberFormat("fr-DZ", { style: "currency", currency: "DZD" }).format(n)
-
-export default function Home() {
+export default function Home({ s }: { s: { currency: string; taxRate: number }}) {
+    const fmt = (n: number) =>
+        new Intl.NumberFormat(undefined, { style: "currency", currency: s.currency }).format(n)
+    
     const [stats, setStats] = useState<Stats>({ invoiced: 0, paid: 0, unpaid: 0, clients: 0 })
 
     useEffect(() => {
-        fetch('https://invoice-back-zcg0.onrender.com/getDash')
+        fetch(`${import.meta.env.VITE_API_URL}/getDash`, {headers: {Authorization: `Bearer ${localStorage.getItem('token')}`}})
             .then(res => res.json())
             .then(data => setStats(data))
     }, [])

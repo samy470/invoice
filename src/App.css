@@ -3,8 +3,18 @@
 @import "shadcn/tailwind.css";
 
 @media print {
+    @page { size: A4; margin: 15mm; }
     body * { visibility: hidden; }
     #print-area, #print-area * { visibility: visible; }
-    #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+    #print-area { position: absolute; top: 0; left: 0; width: 100%; }
+    .modal, .modal-box {
+        position: static !important;
+        transform: none !important;
+        translate: none !important;
+        scale: none !important;
+        overflow: visible !important;
+        max-height: none !important;
+        box-shadow: none !important;
+    }
     .no-print { display: none !important; }
 }

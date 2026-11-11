@@ -6,6 +6,10 @@ type Inoivce = {
     id: number
     invoiceNumber: string
     clientName: string
+    clientEmail?: string
+    clientPhone?: string
+    clientTaxId?: string
+    clientRc?: string
     date: string
     dueDate: string
     total: number
@@ -15,7 +19,10 @@ type Inoivce = {
     items: Item[]
 }
 
-type Profile = { businessName?: string; address?: string; phone?: string; nif?: string; nis?: string }
+type Profile = {
+    businessName?: string; activity?: string; address?: string; phone?: string; email?: string
+    rc?: string; taxId?: string; statId?: string; rib?: string
+}
 
 const today = () => new Date().toISOString().slice(0, 10)
 const inDays = (n: number) => {
@@ -24,17 +31,69 @@ const inDays = (n: number) => {
     return d.toISOString().slice(0, 10)
 }
 const emptyItem = (): Item => ({ description: "", qty: 1, price: 0 })
-const emptyForm = () => ({
-    clientId: "",
-    date: today(),
-    dueDate: inDays(30),
-    taxRate: 19,
-    items: [emptyItem()],
-})
-const fmt = (n: number) =>
-    new Intl.NumberFormat("fr-DZ", { style: "currency", currency: "DZD" }).format(n)
 
-export default function Invoices() {
+const U = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "douze",
+    "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"]
+const T = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante"]
+
+const below100 = (n: number, final: boolean): string => {
+    if (n < 20) return U[n]
+    if (n < 70) {
+        const u = n % 10
+        return T[Math.floor(n / 10)] + (u === 1 ? " et un" : u ? "-" + U[u] : "")
+    }
+    if (n < 80) return n === 71 ? "soixante et onze" : "soixante-" + U[n - 60]
+    if (n === 80) return final ? "quatre-vingts" : "quatre-vingt"
+    return "quatre-vingt-" + U[n - 80]
+}
+
+const below1000 = (n: number, final: boolean): string => {
+    const c = Math.floor(n / 100), r = n % 100
+    let s = ""
+    if (c > 0) s = (c > 1 ? U[c] + " " : "") + "cent" + (c > 1 && r === 0 && final ? "s" : "")
+    if (r > 0) s += (c > 0 ? " " : "") + below100(r, final)
+    return s
+}
+
+const intToWords = (n: number): string => {
+    if (n === 0) return "zéro"
+    const m = Math.floor(n / 1e6), t = Math.floor((n % 1e6) / 1000), r = n % 1000
+    const parts: string[] = []
+    if (m) parts.push(below1000(m, false) + " million" + (m > 1 ? "s" : ""))
+    if (t) parts.push(t === 1 ? "mille" : below1000(t, false) + " mille")
+    if (r) parts.push(below1000(r, true))
+    return parts.join(" ")
+}
+
+const NAMES: Record<string, [string, string]> = {
+    DZD: ["dinar algérien", "dinars algériens"],
+    EUR: ["euro", "euros"],
+    USD: ["dollar américain", "dollars américains"],
+    MAD: ["dirham marocain", "dirhams marocains"],
+    TND: ["dinar tunisien", "dinars tunisiens"],
+}
+
+const amountInWords = (amount: number, currency: string) => {
+    const total = Math.round(amount * 100)
+    const whole = Math.floor(total / 100), cents = total % 100
+    const [one, many] = NAMES[currency] ?? [currency, currency]
+    let s = `${intToWords(whole)} ${whole > 1 ? many : one}`
+    if (cents) s += ` et ${intToWords(cents)} centime${cents > 1 ? "s" : ""}`
+    return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+export default function Invoices({ s }: { s: { currency: string; taxRate: number } }) {
+    const fmt = (n: number) =>
+        new Intl.NumberFormat(undefined, { style: "currency", currency: s.currency }).format(n)
+
+    const emptyForm = () => ({
+        clientId: "",
+        date: today(),
+        dueDate: inDays(30),
+        taxRate: s.taxRate,
+        items: [emptyItem()],
+    })
+
     const [invoices, setInvoices] = useState<Inoivce[]>([])
     const [clients, setClients] = useState<Client[]>([])
     const [selected, setSelected] = useState<Inoivce | null>(null)
@@ -51,6 +110,28 @@ export default function Invoices() {
     const filtered = invoices.filter(u =>
         (u.clientName + " " + u.date).toLowerCase().includes(search.toLowerCase())
     )
+
+    const getInvoices = () => {
+        fetch(`${import.meta.env.VITE_API_URL}/getInvoices`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(res => res.json()).then(data => setInvoices(data))
+    }
+
+    const getUsers = () => {
+        fetch(`${import.meta.env.VITE_API_URL}/getUsers`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(res => res.json()).then(data => setClients(data))
+    }
+
+    useEffect(() => {
+        getInvoices()
+    }, [])
+
+    useEffect(() => {
+        getUsers()
+    }, [])
+
+    useEffect(() => {
+        fetch(`${import.meta.env.VITE_API_URL}/getProfile`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+            .then(res => res.json())
+            .then(data => setProfile(data))
+    }, [])
 
     const openAdd = () => {
         setEditingId(null)
@@ -81,33 +162,36 @@ export default function Invoices() {
         e.preventDefault()
 
         if (editingId !== null) {
-            const res = await fetch('https://invoice-back-zcg0.onrender.com/updateInvoices', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/updateInvoices`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
                 body: JSON.stringify({ ...form, id: editingId })
             })
             const data = await res.json()
             alert(data.message)
         } else {
-            const res = await fetch('https://invoice-back-zcg0.onrender.com/addInvoices', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/addInvoices`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
                 body: JSON.stringify(form)
             })
             const data = await res.json()
             alert(data.message)
         }
+        getInvoices()
         closeForm()
     }
 
     const handleDelete = async (c: Inoivce) => {
-        const res = await fetch('https://invoice-back-zcg0.onrender.com/deleteInvoices', {
+        if (!window.confirm(`Delete ${c.invoiceNumber}?`)) return
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/deleteInvoices`, {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
             body: JSON.stringify({ id: c.id })
         })
         const data = await res.json()
         alert(data.message)
+        await getInvoices()
     }
 
     const updateItem = (index: number, patch: Partial<Item>) =>
@@ -117,28 +201,14 @@ export default function Invoices() {
         })
 
     const changeStatus = async (id: number, e: string) => {
-        const res = await fetch('https://invoice-back-zcg0.onrender.com/changestatus', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/changestatus`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
             body: JSON.stringify({ id, e })
         })
-        const data = await res.json()
-        alert(data.message)
+        await res.json()
+        await getInvoices()
     }
-
-    useEffect(() => {
-        fetch('https://invoice-back-zcg0.onrender.com/getInvoices').then(res => res.json()).then(data => setInvoices(data))
-    }, [handleSave])
-
-    useEffect(() => {
-        fetch('https://invoice-back-zcg0.onrender.com/getUsers').then(res => res.json()).then(data => setClients(data))
-    }, [openAdd])
-
-    useEffect(() => {
-        fetch('http://localhost:8000/getProfile')
-            .then(res => res.json())
-            .then(data => setProfile(data))
-    }, [])
 
     return (
         <div className="p-6">
@@ -189,6 +259,7 @@ export default function Invoices() {
                                     <select value={inv.status} onChange={e => changeStatus(inv.id, e.target.value)}>
                                         <option value="sent">Unpaid</option>
                                         <option value="paid">Paid</option>
+                                        <option value="cancelled">Cancelled</option>
                                     </select>
                                 </td>
                                 <th>
@@ -213,28 +284,46 @@ export default function Invoices() {
             {/* details modal */}
             {selected && (
                 <div className="modal modal-open">
-                    <div className="modal-box max-w-2xl">
+                    <div className="modal-box max-w-3xl">
                         <div id="print-area">
-                            <div className="mb-4 pb-3 border-b">
-                                <div className="text-lg font-bold">{profile.businessName}</div>
-                                <div className="text-sm">{profile.address}</div>
-                                <div className="text-sm">{profile.phone}</div>
-                                <div className="text-sm opacity-70">
-                                    {profile.nif && `NIF: ${profile.nif}`} {profile.nis && `NIS: ${profile.nis}`}
+                            <div className="flex justify-between items-start border-b pb-3">
+                                <div>
+                                    <div className="text-xl font-bold">{profile.businessName}</div>
+                                    {profile.activity && <div className="text-sm">{profile.activity}</div>}
+                                    {profile.address && <div className="text-sm">{profile.address}</div>}
+                                    <div className="text-sm">{[profile.phone, profile.email].filter(Boolean).join(" · ")}</div>
+                                    <div className="text-xs opacity-70">
+                                        {[
+                                            profile.rc && `RC : ${profile.rc}`,
+                                            profile.taxId && `NIF : ${profile.taxId}`,
+                                            profile.statId && `NIS : ${profile.statId}`,
+                                        ].filter(Boolean).join(" · ")}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-2xl font-bold">FACTURE</div>
+                                    <div>N° {selected.invoiceNumber}</div>
+                                    <div className="text-sm">Date : {selected.date}</div>
+                                    <div className="text-sm">Échéance : {selected.dueDate || "-"}</div>
                                 </div>
                             </div>
 
-                            <p className="text-sm opacity-60 mt-2">
-                                Issued {selected.date} · Due {selected.dueDate}
-                            </p>
+                            <div className="mt-4 border rounded p-3 w-72">
+                                <div className="text-xs opacity-60">FACTURÉ À</div>
+                                <div className="font-bold">{selected.clientName}</div>
+                                {selected.clientPhone && <div className="text-sm">Tél : {selected.clientPhone}</div>}
+                                {selected.clientEmail && <div className="text-sm">{selected.clientEmail}</div>}
+                                {selected.clientTaxId && <div className="text-sm">NIF : {selected.clientTaxId}</div>}
+                                {selected.clientRc && <div className="text-sm">RC : {selected.clientRc}</div>}
+                            </div>
 
                             <table className="table mt-4">
                                 <thead>
                                     <tr>
-                                        <th>Description</th>
-                                        <th>Qty</th>
-                                        <th>Unit price</th>
-                                        <th className="text-right">Total</th>
+                                        <th>Désignation</th>
+                                        <th>Qté</th>
+                                        <th>P.U. HT</th>
+                                        <th className="text-right">Montant HT</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -253,26 +342,44 @@ export default function Invoices() {
                                 const sub = selected.items.reduce((s, i) => s + i.qty * i.price, 0)
                                 const tax = (sub * selected.taxRate) / 100
                                 return (
-                                    <div className="mt-4 ml-auto w-64 flex flex-col gap-1">
-                                        <div className="flex justify-between">
-                                            <span className="opacity-60">Subtotal</span>
-                                            <span>{fmt(sub)}</span>
+                                    <>
+                                        <div className="mt-4 ml-auto w-64 flex flex-col gap-1">
+                                            <div className="flex justify-between">
+                                                <span className="opacity-60">Total HT</span>
+                                                <span>{fmt(sub)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="opacity-60">Tax ({selected.taxRate}%)</span>
+                                                <span>{fmt(tax)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-lg font-bold border-t pt-1">
+                                                <span>Total TTC</span>
+                                                <span>{fmt(sub + tax)}</span>
+                                            </div>
+                                            <p className="mt-3 text-sm italic">
+                                                Arrêtée la présente facture à la somme de : {amountInWords(sub + tax, s.currency)}
+                                            </p>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="opacity-60">Tax ({selected.taxRate}%)</span>
-                                            <span>{fmt(tax)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-lg font-bold border-t pt-1">
-                                            <span>Total</span>
-                                            <span>{fmt(sub + tax)}</span>
-                                        </div>
-                                    </div>
+
+                                        {selected.taxRate === 0 && (
+                                            <p className="mt-3 text-sm italic">Not subject to Taxes</p>
+                                        )}
+                                    </>
                                 )
                             })()}
+
+                            {profile.rib && <p className="mt-4 text-xs opacity-70">Virement : {profile.rib}</p>}
+                            <div className="mt-16 flex justify-end">
+                                <div className="w-56 border-t pt-1 text-center text-sm">Signature et cachet</div>
+                            </div>
                         </div>
 
                         <div className="modal-action no-print">
-                            <button className="btn" onClick={() => window.print()}>Download PDF</button>
+                            <button className="btn" onClick={() => {
+                                const api = (window as any).electronAPI
+                                if (api) api.savePdf(selected.invoiceNumber)
+                                else window.print()
+                            }}>Download PDF</button>
                             <button className="btn btn-ghost" onClick={() => setSelected(null)}>Close</button>
                         </div>
                     </div>
@@ -283,7 +390,9 @@ export default function Invoices() {
             {formOpen && (
                 <div className="modal modal-open">
                     <form className="modal-box max-w-3xl flex flex-col gap-4" onSubmit={handleSave}>
-                        <h3 className="text-2xl font-bold">New invoice</h3>
+                        <h3 className="text-2xl font-bold">
+                            {editingId !== null ? "Edit invoice" : "Add invoice"}
+                        </h3>
 
                         <select
                             className="select select-bordered w-full"
@@ -310,6 +419,15 @@ export default function Invoices() {
                                 value={form.dueDate}
                                 onChange={e => setForm({ ...form, dueDate: e.target.value })}
                             />
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    className="checkbox"
+                                    checked={form.taxRate > 0}
+                                    onChange={e => setForm({ ...form, taxRate: e.target.checked ? 19 : 0 })}
+                                />
+                                <span>Tax applicable</span>
+                            </label>
                         </div>
 
                         <div className="flex flex-col gap-2">
@@ -321,31 +439,35 @@ export default function Invoices() {
                                         value={item.description}
                                         onChange={e => updateItem(index, { description: e.target.value })}
                                     />
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        className="input input-bordered w-24"
-                                        value={item.qty}
-                                        onChange={e => updateItem(index, { qty: Number(e.target.value) })}
-                                    />
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        className="input input-bordered w-32"
-                                        value={item.price}
-                                        onChange={e => updateItem(index, { price: Number(e.target.value) })}
-                                    />
+                                    <label className="input input-bordered w-32">
+                                        <span className="label">Qty</span>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={item.qty}
+                                            onChange={e => updateItem(index, { qty: Number(e.target.value) })}
+                                        />
+                                    </label>
+                                    <label className="input input-bordered w-32">
+                                        <span className="label">Price</span>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            value={item.price}
+                                            onChange={e => updateItem(index, { price: Number(e.target.value) })}
+                                        />
+                                    </label>
                                     <span className="w-32 text-right">{fmt(item.qty * item.price)}</span>
                                     <button
                                         type="button"
                                         className="btn btn-ghost btn-xs text-error"
-                                        onClick={() => setForm({ ...form, items: form.items.slice(0, -1) })}
+                                        onClick={() => setForm({ ...form, items: form.items.length > 1 ? form.items.filter((_, i) => i !== index) : form.items, })}
                                     >
                                         ✕
                                     </button>
                                 </div>
                             ))}
-                            <button type="button" className="btn btn-outline btn-sm w-fit" onClick={() => setForm({ ...form, items: [...form.items, { description: "", qty: 0, price: 0 }] })}>
+                            <button type="button" className="btn btn-outline btn-sm w-fit" onClick={() => setForm({ ...form, items: [...form.items, { description: "", qty: 1, price: 0 }] })}>
                                 Add item
                             </button>
                         </div>

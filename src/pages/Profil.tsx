@@ -1,80 +1,93 @@
 import { useState, useEffect } from "react"
 
-const API = 'http://localhost:8000'
-
 type Profile = {
     businessName: string
+    activity: string
     address: string
     phone: string
-    nif: string
-    nis: string
+    email: string
+    rc: string
+    taxId: string
+    statId: string
+    rib: string
 }
 
-const empty: Profile = { businessName: "", address: "", phone: "", nif: "", nis: "" }
+const empty: Profile = {
+    businessName: "", activity: "", address: "", phone: "", email: "",
+    rc: "", taxId: "", statId: "", rib: "",
+}
 
-export default function Profile() {
+const fields: { key: keyof Profile; label: string }[] = [
+    { key: "businessName", label: "Business name" },
+    { key: "activity", label: "Activity" },
+    { key: "address", label: "Address" },
+    { key: "phone", label: "Phone" },
+    { key: "email", label: "Email" },
+    { key: "rc", label: "RC" },
+    { key: "taxId", label: "NIF" },
+    { key: "statId", label: "NIS" },
+    { key: "rib", label: "RIB" },
+]
+
+export default function BusinessProfile() {
     const [form, setForm] = useState<Profile>(empty)
     const [saved, setSaved] = useState(false)
+    const [error, setError] = useState("")
 
     useEffect(() => {
-        fetch(`${API}/getProfile`)
+        fetch(`${import.meta.env.VITE_API_URL}/getProfile`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        })
             .then(res => res.json())
             .then(data => setForm({ ...empty, ...data }))
+            .catch(() => setError("Could not load the profile"))
     }, [])
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
+        setError("")
 
-        await fetch(`${API}/saveProfile`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form),
-        })
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/saveProfile`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
+                },
+                body: JSON.stringify(form),
+            })
+            if (!res.ok) throw new Error()
 
-        setSaved(true)
-        setTimeout(() => setSaved(false), 2000)
+            setSaved(true)
+            setTimeout(() => setSaved(false), 2000)
+        } catch {
+            setError("Could not save the profile")
+        }
     }
 
     return (
-        <div className="p-6 max-w-xl">
-            <form onSubmit={handleSave} className="flex flex-col gap-3">
+        <div className="p-6 max-w-3xl">
+            <form onSubmit={handleSave} className="flex flex-col gap-4">
                 <h2 className="text-2xl font-bold">Business profile</h2>
 
-                <input
-                    className="input input-bordered w-full"
-                    placeholder="Business name"
-                    value={form.businessName}
-                    onChange={e => setForm({ ...form, businessName: e.target.value })}
-                    required
-                />
-                <input
-                    className="input input-bordered w-full"
-                    placeholder="Address"
-                    value={form.address}
-                    onChange={e => setForm({ ...form, address: e.target.value })}
-                />
-                <input
-                    className="input input-bordered w-full"
-                    placeholder="Phone"
-                    value={form.phone}
-                    onChange={e => setForm({ ...form, phone: e.target.value })}
-                />
-                <input
-                    className="input input-bordered w-full"
-                    placeholder="NIF"
-                    value={form.nif}
-                    onChange={e => setForm({ ...form, nif: e.target.value })}
-                />
-                <input
-                    className="input input-bordered w-full"
-                    placeholder="NIS"
-                    value={form.nis}
-                    onChange={e => setForm({ ...form, nis: e.target.value })}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {fields.map(f => (
+                        <label key={f.key} className="flex flex-col gap-1">
+                            <span className="text-sm opacity-60">{f.label}</span>
+                            <input
+                                className="input input-bordered w-full"
+                                value={form[f.key]}
+                                onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                                required={f.key === "businessName"}
+                            />
+                        </label>
+                    ))}
+                </div>
 
                 <div className="flex items-center gap-3">
                     <button type="submit" className="btn btn-primary">Save</button>
                     {saved && <span className="text-success text-sm">Saved</span>}
+                    {error && <span className="text-error text-sm">{error}</span>}
                 </div>
             </form>
         </div>
