@@ -17,6 +17,9 @@ function App() {
   return (
     <BrowserRouter>     
         <Routes>
+          <div className="bg-yellow-500/10 border-b border-yellow-500/30 text-yellow-400 text-xs text-center py-2">
+            Demo project: all data is fake and may reset anytime. Don't use a real password or real client info.
+          </div>
           <Route path='/login' element={<Login setIsLoggedIn={setIsLoggedIn} username={username} setUsername={setUsername} />}/>
           <Route path='/register' element={<Register />}/>
           <Route path='/' element={<Sidebar isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} username={username} setUsername={setUsername} s={s} setS={setS}/>}>
